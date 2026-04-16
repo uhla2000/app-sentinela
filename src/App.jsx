@@ -63,7 +63,7 @@ export default function App() {
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <h1>TESTE DE ANTONIO</h1>
+      <h1>COMENTÁRIOS DO ESTUDO DE A SENTINELA</h1>
 
       {/* Manual */}
       <div style={{ marginBottom: "20px" }}>
