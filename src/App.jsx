@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// 🔑 CONFIGURAÇÃO DO SUPABASE
+const supabase = createClient(
+  "https://mjdxepsxlqfbnmmgvmyy.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qZHhlcHN4bHFmYm5tbWd2bXl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODIzMzQsImV4cCI6MjA5MTk1ODMzNH0.-9wGaBqYSR_M273xo-tQu8fYR3TsDM5fcfA5WZwGZX0"
+);
 
 export default function App() {
   const [respostas, setRespostas] = useState([]);
@@ -6,22 +13,51 @@ export default function App() {
   const [comentario, setComentario] = useState("");
   const [textoBruto, setTextoBruto] = useState("");
 
+  // 🔄 Carregar dados ao iniciar
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const carregarDados = async () => {
+    const { data, error } = await supabase
+      .from("comentarios")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao carregar:", error);
+      return;
+    }
+
+    if (data) setRespostas(data);
+  };
+
   // ➕ Adicionar comentário manual
-  const adicionarComentario = () => {
+  const adicionarComentario = async () => {
     if (!paragrafo || !comentario) return;
 
-    const novo = {
-      id: Date.now(),
-      titulo: `Parágrafo ${paragrafo}`,
-      texto: comentario,
-    };
+    const { data, error } = await supabase
+      .from("comentarios")
+      .insert([
+        {
+          titulo: `Parágrafo ${paragrafo}`,
+          texto: comentario,
+        },
+      ])
+      .select();
 
-    setRespostas([...respostas, novo]);
+    if (error) {
+      console.error("Erro ao salvar:", error);
+      return;
+    }
+
+    if (data) setRespostas([...respostas, ...data]);
+
     setParagrafo("");
     setComentario("");
   };
 
-  // 🧠 Detecta pergunta
+  // 🧠 Detecta início de pergunta
   const ehInicioPergunta = (linha) => {
     const l = linha.trim();
     return (
@@ -32,7 +68,7 @@ export default function App() {
   };
 
   // ⚡ Processar texto completo
-  const processarTexto = () => {
+  const processarTexto = async () => {
     if (!textoBruto) return;
 
     const linhas = textoBruto.split("\n");
@@ -52,18 +88,28 @@ export default function App() {
     }
 
     const novos = blocos.map((bloco, index) => ({
-      id: Date.now() + index,
       titulo: `Item ${respostas.length + index + 1}`,
       texto: bloco,
     }));
 
-    setRespostas([...respostas, ...novos]);
+    const { data, error } = await supabase
+      .from("comentarios")
+      .insert(novos)
+      .select();
+
+    if (error) {
+      console.error("Erro ao salvar lote:", error);
+      return;
+    }
+
+    if (data) setRespostas([...respostas, ...data]);
+
     setTextoBruto("");
   };
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <h1>COMENTÁRIOS DO ESTUDO DE A SENTINELA</h1>
+      <h1>Comentários do Estudo</h1>
 
       {/* Manual */}
       <div style={{ marginBottom: "20px" }}>
