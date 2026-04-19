@@ -12,6 +12,7 @@ export default function App() {
   const [paragrafo, setParagrafo] = useState("");
   const [comentario, setComentario] = useState("");
   const [textoBruto, setTextoBruto] = useState("");
+  const [ultimoExcluido, setUltimoExcluido] = useState(null);
 
   useEffect(() => {
     carregarDados();
@@ -46,16 +47,51 @@ export default function App() {
     setComentario("");
   };
 
-  // 🗑️ EXCLUIR UM
-  const excluirComentario = async (id) => {
-    await supabase.from("comentarios").delete().eq("id", id);
-    setRespostas(respostas.filter((item) => item.id !== id));
+  // 🗑️ EXCLUIR UM (com confirmação)
+  const excluirComentario = async (item) => {
+    const confirmar = window.confirm("Tem certeza que deseja excluir?");
+    if (!confirmar) return;
+
+    setUltimoExcluido(item);
+
+    await supabase.from("comentarios").delete().eq("id", item.id);
+
+    setRespostas(respostas.filter((r) => r.id !== item.id));
   };
 
-  // 💥 EXCLUIR TODOS
+  // 💥 EXCLUIR TODOS (com confirmação)
   const excluirTodos = async () => {
+    const confirmar = window.confirm("Tem certeza que deseja excluir TODOS?");
+    if (!confirmar) return;
+
+    setUltimoExcluido(respostas);
+
     await supabase.from("comentarios").delete().neq("id", 0);
+
     setRespostas([]);
+  };
+
+  // ↩️ DESFAZER
+  const desfazerExclusao = async () => {
+    if (!ultimoExcluido) return;
+
+    const itens = Array.isArray(ultimoExcluido)
+      ? ultimoExcluido
+      : [ultimoExcluido];
+
+    const { data } = await supabase
+      .from("comentarios")
+      .insert(
+        itens.map((i) => ({
+          titulo: i.titulo,
+          texto: i.texto,
+        }))
+      )
+      .select();
+
+    if (data) setRespostas([...respostas, ...data]);
+
+    setUltimoExcluido(null);
   };
 
   // 🧠 Detecta pergunta
@@ -128,11 +164,11 @@ export default function App() {
         </button>
       </div>
 
-      {/* 💥 Botão excluir todos */}
+      {/* 💥 Excluir todos */}
       <button
         onClick={excluirTodos}
         style={{
-          marginBottom: "20px",
+          marginBottom: "10px",
           background: "red",
           color: "white",
           padding: "10px",
@@ -140,6 +176,21 @@ export default function App() {
       >
         Excluir todos
       </button>
+
+      {/* ↩️ Desfazer */}
+      {ultimoExcluido && (
+        <button
+          onClick={desfazerExclusao}
+          style={{
+            marginBottom: "20px",
+            background: "orange",
+            color: "black",
+            padding: "10px",
+          }}
+        >
+          Desfazer exclusão
+        </button>
+      )}
 
       {/* Automático */}
       <div style={{ marginBottom: "20px" }}>
@@ -161,9 +212,8 @@ export default function App() {
           <h2>{item.titulo}</h2>
           <p style={{ whiteSpace: "pre-line" }}>{item.texto}</p>
 
-          {/* 🗑️ Botão excluir individual */}
           <button
-            onClick={() => excluirComentario(item.id)}
+            onClick={() => excluirComentario(item)}
             style={{ background: "gray", color: "white" }}
           >
             Excluir
