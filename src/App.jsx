@@ -47,9 +47,9 @@ export default function App() {
   };
 
   const extrairNumero = (texto) => {
-    const match = texto.trim().match(/^(\d+)[\.\)]/);
-    return match ? parseInt(match[1]) : null;
-  };
+  const match = texto.match(/^\s*(\d+)/);
+  return match ? parseInt(match[1]) : null;
+};
 
   const adicionarComentario = async () => {
     if (!comentario) return;
