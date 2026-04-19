@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 // 🔑 SUPABASE
 const supabase = createClient(
   "https://mjdxepsxlqfbnmmgvmyy.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qZHhlcHN4bHFmYm5tbWd2bXl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzODIzMzQsImV4cCI6MjA5MTk1ODMzNH0.-9wGaBqYSR_M273xo-tQu8fYR3TsDM5fcfA5WZwGZX0"
+  "SUA_ANON_KEY_AQUI"
 );
 
 export default function App() {
@@ -14,6 +14,7 @@ export default function App() {
   const [textoBruto, setTextoBruto] = useState("");
   const [ultimoExcluido, setUltimoExcluido] = useState(null);
   const [toast, setToast] = useState("");
+  const [pressed, setPressed] = useState(null);
 
   useEffect(() => {
     carregarDados();
@@ -22,6 +23,10 @@ export default function App() {
   const mostrarToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
+  };
+
+  const ordenarPorNumero = (lista) => {
+    return [...lista].sort((a, b) => a.numero - b.numero);
   };
 
   const carregarDados = async () => {
@@ -33,15 +38,13 @@ export default function App() {
     if (data) setRespostas(data);
   };
 
-  // 🔢 Próximo número
   const proximoNumero = () => {
     if (respostas.length === 0) return 1;
     return Math.max(...respostas.map((r) => r.numero || 0)) + 1;
   };
 
-  // ➕ Adicionar manual
   const adicionarComentario = async () => {
-    if (!paragrafo || !comentario) return;
+    if (!comentario) return;
 
     const numero = proximoNumero();
 
@@ -57,7 +60,7 @@ export default function App() {
       .select();
 
     if (data) {
-      setRespostas([...respostas, ...data]);
+      setRespostas(ordenarPorNumero([...respostas, ...data]));
       mostrarToast("Comentário salvo ✅");
     }
 
@@ -65,7 +68,6 @@ export default function App() {
     setComentario("");
   };
 
-  // 🗑️ Excluir um
   const excluirComentario = async (item) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
 
@@ -74,12 +76,11 @@ export default function App() {
     await supabase.from("comentarios").delete().eq("id", item.id);
 
     setRespostas(respostas.filter((r) => r.id !== item.id));
-    mostrarToast("Excluído com sucesso 🗑️");
+    mostrarToast("Excluído 🗑️");
   };
 
-  // 💥 Excluir todos
   const excluirTodos = async () => {
-    if (!window.confirm("Excluir TODOS os comentários?")) return;
+    if (!window.confirm("Excluir TODOS?")) return;
 
     setUltimoExcluido(respostas);
 
@@ -89,7 +90,6 @@ export default function App() {
     mostrarToast("Todos excluídos 💥");
   };
 
-  // ↩️ Desfazer
   const desfazerExclusao = async () => {
     if (!ultimoExcluido) return;
 
@@ -109,14 +109,13 @@ export default function App() {
       .select();
 
     if (data) {
-      setRespostas([...respostas, ...data]);
-      mostrarToast("Desfeito com sucesso ↩️");
+      setRespostas(ordenarPorNumero([...respostas, ...data]));
+      mostrarToast("Desfeito ↩️");
     }
 
     setUltimoExcluido(null);
   };
 
-  // 🧠 Detecta pergunta
   const ehInicioPergunta = (linha) => {
     const l = linha.trim();
     return (
@@ -126,7 +125,6 @@ export default function App() {
     );
   };
 
-  // ⚡ Processar texto
   const processarTexto = async () => {
     if (!textoBruto) return;
 
@@ -160,7 +158,7 @@ export default function App() {
       .select();
 
     if (data) {
-      setRespostas([...respostas, ...data]);
+      setRespostas(ordenarPorNumero([...respostas, ...data]));
       mostrarToast("Texto processado 🚀");
     }
 
@@ -168,25 +166,12 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", fontFamily: "Arial" }}>
-      <h1 style={{ textAlign: "center" }}>📖 Comentários do Estudo</h1>
+    <div style={container}>
+      <h1 style={titulo}>📖 Comentários do Estudo</h1>
 
-      {/* Toast */}
-      {toast && (
-        <div style={toastStyle}>
-          {toast}
-        </div>
-      )}
+      {toast && <div style={toastStyle}>{toast}</div>}
 
-      {/* Manual */}
       <div style={{ marginBottom: "20px" }}>
-        <input
-          placeholder="Parágrafo (opcional)"
-          value={paragrafo}
-          onChange={(e) => setParagrafo(e.target.value)}
-          style={input}
-        />
-
         <textarea
           placeholder="Comentário"
           value={comentario}
@@ -194,28 +179,40 @@ export default function App() {
           style={input}
         />
 
-        <button style={botao} onClick={adicionarComentario}>
+        <button
+          style={{
+            ...botao,
+            ...(pressed === "add" ? botaoPressionado : {}),
+          }}
+          onMouseDown={() => setPressed("add")}
+          onMouseUp={() => setPressed(null)}
+          onClick={adicionarComentario}
+        >
           ➕ Adicionar
         </button>
       </div>
 
-      {/* Ações */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <button style={{ ...botao, background: "red" }} onClick={excluirTodos}>
+        <button
+          style={{ ...botao, background: "#e74c3c" }}
+          onClick={excluirTodos}
+        >
           🗑️ Excluir todos
         </button>
 
         {ultimoExcluido && (
-          <button style={{ ...botao, background: "orange" }} onClick={desfazerExclusao}>
+          <button
+            style={{ ...botao, background: "#f39c12" }}
+            onClick={desfazerExclusao}
+          >
             ↩️ Desfazer
           </button>
         )}
       </div>
 
-      {/* Automático */}
       <div style={{ marginBottom: "20px" }}>
         <textarea
-          placeholder="Cole toda a resposta..."
+          placeholder="Cole o texto..."
           value={textoBruto}
           onChange={(e) => setTextoBruto(e.target.value)}
           style={input}
@@ -226,7 +223,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Lista */}
       {respostas.map((item) => (
         <div key={item.id} style={card}>
           <h2>{`Parágrafo ${item.numero}`}</h2>
@@ -244,27 +240,52 @@ export default function App() {
   );
 }
 
-// 🎨 estilos
+// 🎨 ESTILOS
+
+const container = {
+  padding: "20px",
+  maxWidth: "800px",
+  margin: "0 auto",
+  minHeight: "100vh",
+  background: "linear-gradient(135deg, #e0f7fa, #ffffff)",
+  fontFamily: "Arial",
+};
+
+const titulo = {
+  textAlign: "center",
+  marginBottom: "20px",
+};
+
 const botao = {
-  padding: "10px",
-  borderRadius: "8px",
+  padding: "12px 18px",
+  borderRadius: "10px",
   border: "none",
-  background: "#007bff",
+  background: "linear-gradient(145deg, #4facfe, #00f2fe)",
   color: "white",
+  fontWeight: "bold",
   cursor: "pointer",
+  boxShadow: "0 4px 0 #0077aa, 0 6px 10px rgba(0,0,0,0.2)",
+};
+
+const botaoPressionado = {
+  transform: "translateY(2px)",
+  boxShadow: "0 2px 0 #0077aa",
 };
 
 const input = {
   width: "100%",
-  padding: "10px",
+  padding: "12px",
   marginBottom: "10px",
+  borderRadius: "8px",
+  border: "1px solid #ddd",
 };
 
 const card = {
-  background: "#f5f5f5",
-  padding: "15px",
-  borderRadius: "10px",
+  background: "white",
+  padding: "20px",
+  borderRadius: "15px",
   marginBottom: "15px",
+  boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
 };
 
 const toastStyle = {
@@ -273,6 +294,6 @@ const toastStyle = {
   right: "20px",
   background: "#333",
   color: "white",
-  padding: "10px",
+  padding: "10px 15px",
   borderRadius: "8px",
 };
