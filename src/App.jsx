@@ -13,10 +13,16 @@ export default function App() {
   const [comentario, setComentario] = useState("");
   const [textoBruto, setTextoBruto] = useState("");
   const [ultimoExcluido, setUltimoExcluido] = useState(null);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     carregarDados();
   }, []);
+
+  const mostrarToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  };
 
   const carregarDados = async () => {
     const { data } = await supabase
@@ -27,7 +33,6 @@ export default function App() {
     if (data) setRespostas(data);
   };
 
-  // ➕ Adicionar
   const adicionarComentario = async () => {
     if (!paragrafo || !comentario) return;
 
@@ -41,37 +46,37 @@ export default function App() {
       ])
       .select();
 
-    if (data) setRespostas([...respostas, ...data]);
+    if (data) {
+      setRespostas([...respostas, ...data]);
+      mostrarToast("Comentário salvo ✅");
+    }
 
     setParagrafo("");
     setComentario("");
   };
 
-  // 🗑️ EXCLUIR UM (com confirmação)
   const excluirComentario = async (item) => {
-    const confirmar = window.confirm("Tem certeza que deseja excluir?");
-    if (!confirmar) return;
+    if (!window.confirm("Tem certeza que deseja excluir?")) return;
 
     setUltimoExcluido(item);
 
     await supabase.from("comentarios").delete().eq("id", item.id);
 
     setRespostas(respostas.filter((r) => r.id !== item.id));
+    mostrarToast("Excluído com sucesso 🗑️");
   };
 
-  // 💥 EXCLUIR TODOS (com confirmação)
   const excluirTodos = async () => {
-    const confirmar = window.confirm("Tem certeza que deseja excluir TODOS?");
-    if (!confirmar) return;
+    if (!window.confirm("Excluir TODOS os comentários?")) return;
 
     setUltimoExcluido(respostas);
 
     await supabase.from("comentarios").delete().neq("id", 0);
 
     setRespostas([]);
+    mostrarToast("Todos excluídos 💥");
   };
 
-  // ↩️ DESFAZER
   const desfazerExclusao = async () => {
     if (!ultimoExcluido) return;
 
@@ -89,12 +94,14 @@ export default function App() {
       )
       .select();
 
-    if (data) setRespostas([...respostas, ...data]);
+    if (data) {
+      setRespostas([...respostas, ...data]);
+      mostrarToast("Desfeito com sucesso ↩️");
+    }
 
     setUltimoExcluido(null);
   };
 
-  // 🧠 Detecta pergunta
   const ehInicioPergunta = (linha) => {
     const l = linha.trim();
     return (
@@ -104,7 +111,6 @@ export default function App() {
     );
   };
 
-  // ⚡ Processar texto
   const processarTexto = async () => {
     if (!textoBruto) return;
 
@@ -125,7 +131,7 @@ export default function App() {
     }
 
     const novos = blocos.map((bloco, index) => ({
-      titulo: `Item ${respostas.length + index + 1}`,
+      titulo: `Parágrafo ${respostas.length + index + 1}`,
       texto: bloco,
     }));
 
@@ -134,14 +140,38 @@ export default function App() {
       .insert(novos)
       .select();
 
-    if (data) setRespostas([...respostas, ...data]);
+    if (data) {
+      setRespostas([...respostas, ...data]);
+      mostrarToast("Texto processado 🚀");
+    }
 
     setTextoBruto("");
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-      <h1>Comentários do Estudo</h1>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", fontFamily: "Arial" }}>
+      
+      <h1 style={{ textAlign: "center", marginBottom: "20px" }}>
+        📖 Comentários do Estudo
+      </h1>
+
+      {/* Toast */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background: "#333",
+            color: "white",
+            padding: "10px 15px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+          }}
+        >
+          {toast}
+        </div>
+      )}
 
       {/* Manual */}
       <div style={{ marginBottom: "20px" }}>
@@ -149,48 +179,33 @@ export default function App() {
           placeholder="Parágrafo"
           value={paragrafo}
           onChange={(e) => setParagrafo(e.target.value)}
-          style={{ width: "100%", marginBottom: "10px" }}
+          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
         />
 
         <textarea
           placeholder="Comentário"
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
-          style={{ width: "100%", marginBottom: "10px" }}
+          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
         />
 
-        <button onClick={adicionarComentario}>
-          Adicionar
+        <button style={botao} onClick={adicionarComentario}>
+          ➕ Adicionar
         </button>
       </div>
 
-      {/* 💥 Excluir todos */}
-      <button
-        onClick={excluirTodos}
-        style={{
-          marginBottom: "10px",
-          background: "red",
-          color: "white",
-          padding: "10px",
-        }}
-      >
-        Excluir todos
-      </button>
-
-      {/* ↩️ Desfazer */}
-      {ultimoExcluido && (
-        <button
-          onClick={desfazerExclusao}
-          style={{
-            marginBottom: "20px",
-            background: "orange",
-            color: "black",
-            padding: "10px",
-          }}
-        >
-          Desfazer exclusão
+      {/* Ações */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <button style={{ ...botao, background: "red" }} onClick={excluirTodos}>
+          🗑️ Excluir todos
         </button>
-      )}
+
+        {ultimoExcluido && (
+          <button style={{ ...botao, background: "orange" }} onClick={desfazerExclusao}>
+            ↩️ Desfazer
+          </button>
+        )}
+      </div>
 
       {/* Automático */}
       <div style={{ marginBottom: "20px" }}>
@@ -198,23 +213,23 @@ export default function App() {
           placeholder="Cole toda a resposta..."
           value={textoBruto}
           onChange={(e) => setTextoBruto(e.target.value)}
-          style={{ width: "100%", marginBottom: "10px" }}
+          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
         />
 
-        <button onClick={processarTexto}>
-          Separar e salvar
+        <button style={botao} onClick={processarTexto}>
+          ⚡ Processar texto
         </button>
       </div>
 
       {/* Lista */}
       {respostas.map((item) => (
-        <div key={item.id} style={{ marginBottom: "15px" }}>
+        <div key={item.id} style={card}>
           <h2>{item.titulo}</h2>
           <p style={{ whiteSpace: "pre-line" }}>{item.texto}</p>
 
           <button
+            style={{ ...botao, background: "#555" }}
             onClick={() => excluirComentario(item)}
-            style={{ background: "gray", color: "white" }}
           >
             Excluir
           </button>
@@ -223,3 +238,21 @@ export default function App() {
     </div>
   );
 }
+
+// 🎨 estilos reutilizáveis
+const botao = {
+  padding: "10px 15px",
+  border: "none",
+  borderRadius: "8px",
+  background: "#007bff",
+  color: "white",
+  cursor: "pointer",
+};
+
+const card = {
+  background: "#f5f5f5",
+  padding: "15px",
+  borderRadius: "10px",
+  marginBottom: "15px",
+  boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+};
