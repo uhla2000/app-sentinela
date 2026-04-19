@@ -9,7 +9,6 @@ const supabase = createClient(
 
 export default function App() {
   const [respostas, setRespostas] = useState([]);
-  const [paragrafo, setParagrafo] = useState("");
   const [comentario, setComentario] = useState("");
   const [textoBruto, setTextoBruto] = useState("");
   const [ultimoExcluido, setUltimoExcluido] = useState(null);
@@ -43,10 +42,23 @@ export default function App() {
     return Math.max(...respostas.map((r) => r.numero || 0)) + 1;
   };
 
+  const numeroExiste = (n) => {
+    return respostas.some((r) => r.numero === n);
+  };
+
+  const extrairNumero = (texto) => {
+    const match = texto.trim().match(/^(\d+)[\.\)]/);
+    return match ? parseInt(match[1]) : null;
+  };
+
   const adicionarComentario = async () => {
     if (!comentario) return;
 
-    const numero = proximoNumero();
+    let numero = extrairNumero(comentario);
+
+    if (!numero || numeroExiste(numero)) {
+      numero = proximoNumero();
+    }
 
     const { data } = await supabase
       .from("comentarios")
@@ -64,7 +76,6 @@ export default function App() {
       mostrarToast("Comentário salvo ✅");
     }
 
-    setParagrafo("");
     setComentario("");
   };
 
@@ -144,13 +155,19 @@ export default function App() {
       blocos.push(atual.join("\n").trim());
     }
 
-    const base = proximoNumero();
+    const novos = blocos.map((bloco) => {
+      let numero = extrairNumero(bloco);
 
-    const novos = blocos.map((bloco, index) => ({
-      numero: base + index,
-      titulo: `Parágrafo ${base + index}`,
-      texto: bloco,
-    }));
+      if (!numero || numeroExiste(numero)) {
+        numero = proximoNumero();
+      }
+
+      return {
+        numero,
+        titulo: `Parágrafo ${numero}`,
+        texto: bloco,
+      };
+    });
 
     const { data } = await supabase
       .from("comentarios")
@@ -173,7 +190,7 @@ export default function App() {
 
       <div style={{ marginBottom: "20px" }}>
         <textarea
-          placeholder="Comentário"
+          placeholder="Comentário (ex: 1. O que aprendemos?)"
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
           style={input}
@@ -212,7 +229,7 @@ export default function App() {
 
       <div style={{ marginBottom: "20px" }}>
         <textarea
-          placeholder="Cole o texto..."
+          placeholder="Cole o texto completo..."
           value={textoBruto}
           onChange={(e) => setTextoBruto(e.target.value)}
           style={input}
