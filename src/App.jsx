@@ -47,9 +47,15 @@ export default function App() {
   };
 
   const extrairNumero = (texto) => {
-  const match = texto.match(/^\s*(\d+)/);
-  return match ? parseInt(match[1]) : null;
-};
+  const linhas = texto.split("\n");
+
+  for (let linha of linhas) {
+    const match = linha.match(/^\s*(\d+)/);
+    if (match) return parseInt(match[1]);
+  }
+
+  return null;
+  };
 
   const adicionarComentario = async () => {
     if (!comentario) return;
