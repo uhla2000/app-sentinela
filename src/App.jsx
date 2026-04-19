@@ -46,15 +46,16 @@ export default function App() {
     return respostas.some((r) => r.numero === n);
   };
 
+  // 🔥 EXTRAÇÃO INTELIGENTE (QUALQUER LINHA)
   const extrairNumero = (texto) => {
-  const linhas = texto.split("\n");
+    const linhas = texto.split("\n");
 
-  for (let linha of linhas) {
-    const match = linha.match(/^\s*(\d+)/);
-    if (match) return parseInt(match[1]);
-  }
+    for (let linha of linhas) {
+      const match = linha.match(/^\s*(\d+)/);
+      if (match) return parseInt(match[1]);
+    }
 
-  return null;
+    return null;
   };
 
   const adicionarComentario = async () => {
@@ -263,7 +264,7 @@ export default function App() {
   );
 }
 
-// 🎨 ESTILOS
+// 🎨 ESTILO
 
 const container = {
   padding: "20px",
