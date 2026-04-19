@@ -28,19 +28,29 @@ export default function App() {
     const { data } = await supabase
       .from("comentarios")
       .select("*")
-      .order("id", { ascending: true });
+      .order("numero", { ascending: true });
 
     if (data) setRespostas(data);
   };
 
+  // 🔢 Próximo número
+  const proximoNumero = () => {
+    if (respostas.length === 0) return 1;
+    return Math.max(...respostas.map((r) => r.numero || 0)) + 1;
+  };
+
+  // ➕ Adicionar manual
   const adicionarComentario = async () => {
     if (!paragrafo || !comentario) return;
+
+    const numero = proximoNumero();
 
     const { data } = await supabase
       .from("comentarios")
       .insert([
         {
-          titulo: `Parágrafo ${paragrafo}`,
+          numero,
+          titulo: `Parágrafo ${numero}`,
           texto: comentario,
         },
       ])
@@ -55,6 +65,7 @@ export default function App() {
     setComentario("");
   };
 
+  // 🗑️ Excluir um
   const excluirComentario = async (item) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
 
@@ -66,6 +77,7 @@ export default function App() {
     mostrarToast("Excluído com sucesso 🗑️");
   };
 
+  // 💥 Excluir todos
   const excluirTodos = async () => {
     if (!window.confirm("Excluir TODOS os comentários?")) return;
 
@@ -77,6 +89,7 @@ export default function App() {
     mostrarToast("Todos excluídos 💥");
   };
 
+  // ↩️ Desfazer
   const desfazerExclusao = async () => {
     if (!ultimoExcluido) return;
 
@@ -88,6 +101,7 @@ export default function App() {
       .from("comentarios")
       .insert(
         itens.map((i) => ({
+          numero: i.numero,
           titulo: i.titulo,
           texto: i.texto,
         }))
@@ -102,6 +116,7 @@ export default function App() {
     setUltimoExcluido(null);
   };
 
+  // 🧠 Detecta pergunta
   const ehInicioPergunta = (linha) => {
     const l = linha.trim();
     return (
@@ -111,6 +126,7 @@ export default function App() {
     );
   };
 
+  // ⚡ Processar texto
   const processarTexto = async () => {
     if (!textoBruto) return;
 
@@ -130,8 +146,11 @@ export default function App() {
       blocos.push(atual.join("\n").trim());
     }
 
+    const base = proximoNumero();
+
     const novos = blocos.map((bloco, index) => ({
-      titulo: `Parágrafo ${respostas.length + index + 1}`,
+      numero: base + index,
+      titulo: `Parágrafo ${base + index}`,
       texto: bloco,
     }));
 
@@ -150,25 +169,11 @@ export default function App() {
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", fontFamily: "Arial" }}>
-      
-      <h1 style={{ textAlign: "center", marginBottom: "20px" }}>
-        📖 Comentários do Estudo
-      </h1>
+      <h1 style={{ textAlign: "center" }}>📖 Comentários do Estudo</h1>
 
       {/* Toast */}
       {toast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "20px",
-            right: "20px",
-            background: "#333",
-            color: "white",
-            padding: "10px 15px",
-            borderRadius: "8px",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
-          }}
-        >
+        <div style={toastStyle}>
           {toast}
         </div>
       )}
@@ -176,17 +181,17 @@ export default function App() {
       {/* Manual */}
       <div style={{ marginBottom: "20px" }}>
         <input
-          placeholder="Parágrafo"
+          placeholder="Parágrafo (opcional)"
           value={paragrafo}
           onChange={(e) => setParagrafo(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
+          style={input}
         />
 
         <textarea
           placeholder="Comentário"
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
+          style={input}
         />
 
         <button style={botao} onClick={adicionarComentario}>
@@ -213,7 +218,7 @@ export default function App() {
           placeholder="Cole toda a resposta..."
           value={textoBruto}
           onChange={(e) => setTextoBruto(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
+          style={input}
         />
 
         <button style={botao} onClick={processarTexto}>
@@ -224,7 +229,7 @@ export default function App() {
       {/* Lista */}
       {respostas.map((item) => (
         <div key={item.id} style={card}>
-          <h2>{item.titulo}</h2>
+          <h2>{`Parágrafo ${item.numero}`}</h2>
           <p style={{ whiteSpace: "pre-line" }}>{item.texto}</p>
 
           <button
@@ -239,14 +244,20 @@ export default function App() {
   );
 }
 
-// 🎨 estilos reutilizáveis
+// 🎨 estilos
 const botao = {
-  padding: "10px 15px",
-  border: "none",
+  padding: "10px",
   borderRadius: "8px",
+  border: "none",
   background: "#007bff",
   color: "white",
   cursor: "pointer",
+};
+
+const input = {
+  width: "100%",
+  padding: "10px",
+  marginBottom: "10px",
 };
 
 const card = {
@@ -254,5 +265,14 @@ const card = {
   padding: "15px",
   borderRadius: "10px",
   marginBottom: "15px",
-  boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+};
+
+const toastStyle = {
+  position: "fixed",
+  top: "20px",
+  right: "20px",
+  background: "#333",
+  color: "white",
+  padding: "10px",
+  borderRadius: "8px",
 };
